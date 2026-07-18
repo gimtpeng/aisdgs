@@ -202,6 +202,43 @@ RECIPES = [
 
 import google.generativeai as genai
 import json
+import os
+
+DATA_FILE = "fridge_data.json"
+
+def load_data():
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                ingredients = data.get("ingredients", [])
+                for item in ingredients:
+                    if "expiry_date" in item and isinstance(item["expiry_date"], str):
+                        item["expiry_date"] = datetime.datetime.strptime(item["expiry_date"], "%Y-%m-%d").date()
+                return data
+        except Exception as e:
+            pass
+    return {}
+
+def save_data():
+    ingredients_serializable = []
+    for item in st.session_state.get("ingredients", []):
+        serializable_item = item.copy()
+        if isinstance(serializable_item.get("expiry_date"), datetime.date):
+            serializable_item["expiry_date"] = serializable_item["expiry_date"].strftime("%Y-%m-%d")
+        ingredients_serializable.append(serializable_item)
+        
+    data = {
+        "survey_completed": st.session_state.get("survey_completed", False),
+        "survey_answers": st.session_state.get("survey_answers", {}),
+        "ingredients": ingredients_serializable,
+        "rescued_count": st.session_state.get("rescued_count", 0)
+    }
+    try:
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        pass
 
 
 # 페이지 기본 설정 및 디자인
@@ -290,11 +327,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ----------------- 세션 상태 초기화 -----------------
+# 파일에서 이전 데이터 로드
+loaded_data = load_data()
+
 if 'survey_completed' not in st.session_state:
-    st.session_state.survey_completed = False
+    st.session_state.survey_completed = loaded_data.get('survey_completed', False)
 
 if 'survey_answers' not in st.session_state:
-    st.session_state.survey_answers = {
+    st.session_state.survey_answers = loaded_data.get('survey_answers', {
         'style': "선택 안 함",
         'avoidance': "선택 안 함",
         'importance': "선택 안 함",
@@ -303,14 +343,13 @@ if 'survey_answers' not in st.session_state:
         'concept': "선택 안 함",
         'method': "선택 안 함",
         'dessert': "선택 안 함"
-    }
+    })
 
 if 'ingredients' not in st.session_state:
-    # 기본 테스트 식재료 셋 (비워달라는 요청 반영)
-    st.session_state.ingredients = []
+    st.session_state.ingredients = loaded_data.get('ingredients', [])
 
 if 'rescued_count' not in st.session_state:
-    st.session_state.rescued_count = 0
+    st.session_state.rescued_count = loaded_data.get('rescued_count', 0)
 
 # 계산식 기반 에코 메트릭값 계산
 saved_budget = st.session_state.rescued_count * 3000
@@ -403,6 +442,7 @@ if not st.session_state.survey_completed:
         if st.button("🌱 취향 분석 완료 후 대시보드 진입", use_container_width=True, type="primary"):
             st.session_state.survey_completed = True
             st.success("분석이 완료되었습니다! 대시보드로 이동합니다.")
+            save_data()
             st.rerun()
     else:
         st.button("🚫 모든 질문에 답변해 주세요 (대시보드 잠김)", use_container_width=True, disabled=True)
@@ -428,6 +468,7 @@ else:
             new_item = {"name": input_name.strip(), "expiry_date": input_expiry, "quantity": int(input_qty)}
             st.session_state.ingredients.append(new_item)
             st.sidebar.success(f"'{input_name}' {input_qty}개가 냉장고에 보관되었습니다.")
+            save_data()
             st.rerun()
             
     st.sidebar.write("---")
@@ -452,6 +493,7 @@ else:
     if st.sidebar.button("🔄 취향 분석 다시 하기", use_container_width=True):
         st.session_state.survey_completed = False
         st.session_state.survey_answers = {k: "선택 안 함" for k in st.session_state.survey_answers.keys()}
+        save_data()
         st.rerun()
         
     st.sidebar.write("---")
@@ -531,6 +573,7 @@ else:
                         if item['name'] == to_delete:
                             st.session_state.ingredients.pop(idx)
                             st.success(f"'{to_delete}'를 냉장고에서 꺼냈습니다.")
+                            save_data()
                             st.rerun()
 
     with col_dash_right:
@@ -795,4 +838,9 @@ else:
                         
                         # 결과 추천 초기화
                         st.session_state.recommendations = []
+                        save_data()
                         st.rerun()
+
+# ----------------- 데이터 자동 저장 (스크립트 종료 시) -----------------
+save_data()
+

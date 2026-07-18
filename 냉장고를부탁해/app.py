@@ -244,9 +244,18 @@ else:
     st.sidebar.write("---")
     st.sidebar.markdown("### 🔑 API 설정")
     
-    # 1순위: 환경 변수, 2순위: 사용자 입력
+    # 1순위: st.secrets, 2순위: 환경 변수, 3순위: 사용자 직접 입력
     import os
-    env_key = os.environ.get("GEMINI_API_KEY", "")
+    env_key = ""
+    try:
+        if "GEMINI_API_KEY" in st.secrets:
+            env_key = st.secrets["GEMINI_API_KEY"]
+    except:
+        pass
+        
+    if not env_key:
+        env_key = os.environ.get("GEMINI_API_KEY", "")
+        
     api_key_input = st.sidebar.text_input(
         "Gemini API Key",
         value=st.session_state.get("api_key", env_key),

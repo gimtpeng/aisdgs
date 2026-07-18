@@ -497,10 +497,18 @@ else:
                         
                         top_recommendations = []
                         for idx, r in enumerate(data):
+                            # 유연한 부분 매칭 (식재료명 뒤에 수량이나 단위가 붙어있어도 매칭되도록 처리)
+                            matched_ingredients = []
+                            for m in selected_materials:
+                                for r_ing in r.get('ingredients', []):
+                                    if m in r_ing or r_ing in m:
+                                        matched_ingredients.append(m)
+                                        break
+                            
                             top_recommendations.append({
                                 "recipe": r,
                                 "score": 100 - idx,
-                                "matched_ingredients": [m for m in selected_materials if m in r.get('ingredients', [])]
+                                "matched_ingredients": list(set(matched_ingredients))
                             })
                         
                         st.session_state.recommendations = top_recommendations

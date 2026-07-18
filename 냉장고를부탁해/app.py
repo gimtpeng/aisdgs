@@ -3,6 +3,9 @@ import streamlit as st
 import datetime
 import pandas as pd
 from recipes import RECIPES
+import google.generativeai as genai
+import json
+
 
 # 페이지 기본 설정 및 디자인
 st.set_page_config(
@@ -239,6 +242,24 @@ else:
         st.rerun()
         
     st.sidebar.write("---")
+    st.sidebar.markdown("### 🔑 API 설정")
+    
+    # 1순위: 환경 변수, 2순위: 사용자 입력
+    import os
+    env_key = os.environ.get("GEMINI_API_KEY", "")
+    api_key_input = st.sidebar.text_input(
+        "Gemini API Key",
+        value=st.session_state.get("api_key", env_key),
+        type="password",
+        placeholder="API 키 입력 (AI 추천 기능 활성화)"
+    )
+    if api_key_input:
+        st.session_state.api_key = api_key_input
+        genai.configure(api_key=api_key_input)
+    else:
+        st.session_state.api_key = ""
+        
+    st.sidebar.write("---")
     st.sidebar.caption("🌍 SDGs 12 - 책임감 있는 소비와 생산 패턴을 위해 음식물 쓰레기를 최소화합시다.")
 
     # ----------------- 기능 C: 메인 대시보드 (상단 현황판) -----------------
@@ -349,86 +370,75 @@ else:
             default=default_selections
         )
         
-        if st.button("💡 레시피 추천 받기", type="primary", use_container_width=True):
+        if st.button("💡 AI 실시간 레시피 추천 받기", type="primary", use_container_width=True):
             if not selected_materials:
                 st.warning("레시피를 조회할 식재료를 최소 1개 이상 선택해 주세요!")
+            elif not st.session_state.get("api_key", ""):
+                st.error("👈 왼쪽 사이드바(Sidebar) 하단에서 Gemini API Key를 먼저 입력해 주세요!")
             else:
                 st.session_state.selected_materials = selected_materials
-                # 매칭 스코어링 시작
                 user_pref = st.session_state.survey_answers
-                scored_recipes = []
                 
-                for r in RECIPES:
-                    # 1. 알레르기/기피 재료 필터링
-                    avoid = user_pref['avoidance']
-                    if avoid == "갑각류" and "새우" in r['ingredients']:
-                        continue
-                    if avoid == "견과류" and any(nut in r['ingredients'] for nut in ["아몬드", "호두", "견과류"]):
-                        continue
-                    if avoid == "유제품" and any(dairy in r['ingredients'] for dairy in ["우유", "치즈", "요거트"]):
-                        continue
-                    if avoid == "비건 선호" and "비건 선호" not in r['avoidance']:
-                        continue
-                        
-                    # 2. 매칭 스코어링
-                    score = 0
+                # Gemini 실시간 레시피 생성 진행
+                with st.spinner("Gemini AI가 냉장고 속 재료와 취향을 분석하여 환경 친화적 레시피를 창작하고 있습니다... 🧑‍🍳"):
+                    prompt = f"""
+                    You are a Zero Waste AI chef helping users cook to achieve SDGs Target 12 (Zero Waste).
+                    Based on the following parameters, suggest exactly 3 eco-friendly recipes.
                     
-                    # 주 식재료 매칭 점수 (선택한 재료가 들어가는 만큼 추가)
-                    matched_in_recipe = [m for m in selected_materials if m in r['ingredients']]
-                    if not matched_in_recipe:
-                        # 선택 재료가 아예 없는 레시피는 점수를 깎거나 하단으로 제외
-                        score -= 5
-                    else:
-                        score += len(matched_in_recipe) * 3  # 선택 재료 1개 매칭당 +3점
-                        
-                    # 선호 스타일
-                    if r['style'] == user_pref['style']:
-                        score += 2
+                    Available Ingredients in Refrigerator: {', '.join(selected_materials)}
+                    User Cooking Style preference: {user_pref.get('style')}
+                    Avoided Ingredients/Allergies: {user_pref.get('avoidance')}
+                    Cooking Importance: {user_pref.get('importance')}
+                    Preferred Spiciness: {user_pref.get('spicy')}
+                    Preferred Category: {user_pref.get('main_category')}
+                    Concept: {user_pref.get('concept')}
+                    Preferred Cooking Method: {user_pref.get('method')}
+                    Dessert Preference: {user_pref.get('dessert')}
                     
-                    # 요리할 때 가장 중요하게 생각하는 것
-                    if user_pref['importance'] == "조리 시간(초간단)" and r['cooking_time'] <= 10:
-                        score += 3
-                    elif user_pref['importance'] == "영양 밸런스" and r['importance'] == "영양 밸런스":
-                        score += 2
-                    elif user_pref['importance'] == "비주얼" and r['importance'] == "비주얼":
-                        score += 2
-                    elif user_pref['importance'] == "맛의 깊이" and r['importance'] == "맛의 깊이":
-                        score += 2
+                    Zero Waste Constraint: The recipes MUST utilize at least one of the available ingredients listed. Explain how this recipe prevents food waste.
+                    Avoidance Constraint: DO NOT include any avoided ingredients in the recipe ingredients list.
+                    
+                    Output MUST be a valid JSON array of exactly 3 objects. Do not include markdown code block formatting (like ```json), just return raw JSON text.
+                    Each object in the array must strictly have the following keys (do not add others):
+                    - "name": Recipe name in Korean, with an English subtitle in parentheses, e.g. "두부 청경채 볶음 (Tofu Bok Choy Stir-fry)".
+                    - "ingredients": A list of strings representing the key ingredients (e.g. ["두부", "청경채", "굴소스"]).
+                    - "style": Cooking style in Korean (e.g. "한식", "중식").
+                    - "difficulty": "쉬움", "보통", or "어려움".
+                    - "cooking_time": Cooking time in minutes (integer).
+                    - "calories": Calories in kcal (integer).
+                    - "description": Description of the recipe in Korean.
+                    - "zero_waste_tip": A short tip in Korean explaining why this recipe is eco-friendly or how to reduce waste (e.g., using vegetable scraps).
+                    - "image_keyword": 1 or 2 English search terms to find a relevant image on Unsplash (e.g., "tofu stirfry", "mushroom soup"). Do not use spaces in a single keyword, separate multiple keywords with comma.
+                    """
+                    
+                    try:
+                        model = genai.GenerativeModel('gemini-1.5-flash')
+                        response = model.generate_content(prompt)
+                        text = response.text.strip()
                         
-                    # 매운맛 수준
-                    if r['spicy'] == user_pref['spicy']:
-                        score += 2
+                        # Markdown 코드 블록 제거 및 순수 JSON 파싱
+                        if text.startswith("```"):
+                            lines = text.split("\n")
+                            if lines[0].startswith("```"):
+                                lines = lines[1:]
+                            if lines[-1].startswith("```"):
+                                lines = lines[:-1]
+                            text = "\n".join(lines).strip()
+                            
+                        data = json.loads(text)
                         
-                    # 메인 재료 부류
-                    if r['main_category'] == user_pref['main_category']:
-                        score += 2
+                        top_recommendations = []
+                        for idx, r in enumerate(data):
+                            top_recommendations.append({
+                                "recipe": r,
+                                "score": 100 - idx,
+                                "matched_ingredients": [m for m in selected_materials if m in r.get('ingredients', [])]
+                            })
                         
-                    # 오늘 요리 컨셉
-                    if r['concept'] == user_pref['concept']:
-                        score += 2
-                        
-                    # 선호 조리법
-                    if r['method'] == user_pref['method']:
-                        score += 1
-                        
-                    # 디저트 선호 조건
-                    is_dessert_pref = "디저트가 필요해요" in user_pref['dessert']
-                    is_recipe_dessert = r.get('is_dessert', False)
-                    if is_dessert_pref == is_recipe_dessert:
-                        score += 2
-                        
-                    scored_recipes.append({
-                        "recipe": r,
-                        "score": score,
-                        "matched_ingredients": matched_in_recipe
-                    })
-                
-                # 스코어 높은 순으로 정렬
-                scored_recipes = sorted(scored_recipes, key=lambda x: x['score'], reverse=True)
-                # 상위 3개 선별
-                top_recommendations = scored_recipes[:3]
-                
-                st.session_state.recommendations = top_recommendations
+                        st.session_state.recommendations = top_recommendations
+                        st.success("Gemini가 완성도 높은 친환경 레시피를 실시간으로 설계했습니다! 🎉")
+                    except Exception as e:
+                        st.error(f"Gemini API 호출 및 레시피 생성 중 오류가 발생했습니다: {str(e)}")
                 
         # 추천 레시피 결과 출력
         if 'recommendations' in st.session_state and st.session_state.recommendations:
@@ -440,31 +450,37 @@ else:
                 score = item['score']
                 matched = item['matched_ingredients']
                 
-                # HTML Card 디자인
+                # HTML Card 디자인 (안전하게 get 적용)
                 badges_html = f"""
-                <span class="badge badge-style">{r['style']}</span>
-                <span class="badge badge-time">⏱️ {r['cooking_time']}분</span>
-                <span class="badge badge-diff">📊 난이도: {r['difficulty']}</span>
-                <span class="badge badge-cal">🔥 {r['calories']} kcal</span>
+                <span class="badge badge-style">{r.get('style', '기타')}</span>
+                <span class="badge badge-time">⏱️ {r.get('cooking_time', 15)}분</span>
+                <span class="badge badge-diff">📊 난이도: {r.get('difficulty', '보통')}</span>
+                <span class="badge badge-cal">🔥 {r.get('calories', 200)} kcal</span>
                 """
                 
                 # 레시피별 정확히 일치하는 고화질 Unsplash 이미지 URL 매핑
-                base_name = r['name'].split(" (")[0]
+                base_name = r.get('name', '').split(" (")[0]
                 image_map = {
                     "두부 야채 볶음": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&q=80",
-                    "매콤 소고기 볶음": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=200&q=80",
+                    "매콤 소고기 볶음": "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=200&q=80",
                     "갈릭 크림 파스타": "https://images.unsplash.com/photo-1546549032-9571cd6b27df?auto=format&fit=crop&w=200&q=80",
                     "불닭 볶음 우동": "https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=200&q=80",
                     "해물 토마토 스튜": "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=200&q=80",
-                    "견과류 멸치 볶음": "https://images.unsplash.com/photo-1538332576187-e5108f499c78?auto=format&fit=crop&w=200&q=80",
+                    "견과류 멸치 볶음": "https://images.unsplash.com/photo-1525755662778-989d0524087e?auto=format&fit=crop&w=200&q=80",
                     "초간단 계란 간장밥": "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=200&q=80",
                     "연어 샐러드": "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=200&q=80",
-                    "버섯 전골": "https://images.unsplash.com/photo-1547592165-817ab5520a15?auto=format&fit=crop&w=200&q=80",
+                    "버섯 전골": "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=200&q=80",
                     "꿔바로우식 버섯 탕수": "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=200&q=80",
                     "상큼 과일 요거트볼": "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=200&q=80",
                     "상큼 민트 레몬에이드": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=200&q=80"
                 }
-                image_url = image_map.get(base_name, "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=200&q=80")
+                
+                # 기존 12종 리스트와 일치하면 검증된 사진, 신규 생성 레시피면 AI 키워드를 기반으로 loremflickr 호출
+                if base_name in image_map:
+                    image_url = image_map[base_name]
+                else:
+                    kw = r.get('image_keyword', 'food')
+                    image_url = f"https://loremflickr.com/200/200/{kw}?lock={idx+10}"
                 
                 st.markdown(f"""
                 <div class="recipe-card">

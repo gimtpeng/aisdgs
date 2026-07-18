@@ -557,42 +557,118 @@ else:
                     # 검색용 텍스트 병합
                     scan_text = f"{recipe_name} {' '.join(ingredients)} {desc} {method} {style}".lower()
                     
+                    # 각 카테고리별 다채로운 고화질 이미지 풀 (레시피 이름 해시값에 따라 동적 매칭)
+                    import hashlib
+                    h_val = int(hashlib.md5(recipe_name.encode('utf-8')).hexdigest(), 16)
+                    
+                    images_drinks = [
+                        "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1536935338788-846bb9981813?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1497534446932-c925b458314e?auto=format&fit=crop&w=300&q=80"
+                    ]
+                    images_desserts = [
+                        "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=300&q=80"
+                    ]
+                    images_pasta = [
+                        "https://images.unsplash.com/photo-1546549032-9571cd6b27df?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=300&q=80"
+                    ]
+                    images_noodles = [
+                        "https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1552611052-33e04de081de?auto=format&fit=crop&w=300&q=80"
+                    ]
+                    images_rice = [
+                        "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1541795795328-f073b763494e?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1603133872878-696650461b59?auto=format&fit=crop&w=300&q=80"
+                    ]
+                    images_salmon = [
+                        "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=300&q=80"
+                    ]
+                    images_seafood = [
+                        "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1559737607-3578909a5a3b?auto=format&fit=crop&w=300&q=80"
+                    ]
+                    images_beef = [
+                        "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1546964124-0cce460f38ef?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1603048588665-791ca8aea617?auto=format&fit=crop&w=300&q=80"
+                    ]
+                    images_pork = [
+                        "https://images.unsplash.com/photo-1602489114888-6625801334f5?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1593088137231-fc4277bc7948?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?auto=format&fit=crop&w=300&q=80"
+                    ]
+                    images_chicken = [
+                        "https://images.unsplash.com/photo-1598515214211-89d3e73ae83b?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1606787366850-de6330128bfc?auto=format&fit=crop&w=300&q=80"
+                    ]
+                    images_soup = [
+                        "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1607532941433-304659e8198a?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1547592165-e1d17f168681?auto=format&fit=crop&w=300&q=80"
+                    ]
+                    images_tofu = [
+                        "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=300&q=80"
+                    ]
+                    images_mushrooms = [
+                        "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=300&q=80"
+                    ]
+                    images_salad = [
+                        "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1543339308-43e59d6b73a6?auto=format&fit=crop&w=300&q=80"
+                    ]
+                    images_egg = [
+                        "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=300&q=80",
+                        "https://images.unsplash.com/photo-1506084868230-bb9d95c24759?auto=format&fit=crop&w=300&q=80"
+                    ]
+
                     if any(x in scan_text for x in ["레몬에이드", "에이드", "음료", "주스", "tea", "drink", "lemonade"]):
-                        image_url = "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=300&q=80"
+                        image_url = images_drinks[h_val % len(images_drinks)]
                     elif any(x in scan_text for x in ["요거트", "디저트", "과일", "yoghurt", "yogurt", "dessert", "fruit"]):
-                        image_url = "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=300&q=80"
+                        image_url = images_desserts[h_val % len(images_desserts)]
                     elif any(x in scan_text for x in ["파스타", "스파게티", "pasta", "spaghetti"]):
-                        image_url = "https://images.unsplash.com/photo-1546549032-9571cd6b27df?auto=format&fit=crop&w=300&q=80"
+                        image_url = images_pasta[h_val % len(images_pasta)]
                     elif any(x in scan_text for x in ["우동", "라면", "면", "국수", "noodle", "udon", "ramen"]):
-                        image_url = "https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=300&q=80"
+                        image_url = images_noodles[h_val % len(images_noodles)]
                     elif any(x in scan_text for x in ["간장밥", "볶음밥", "비빔밥", "덮밥", "밥", "rice", "bibimbap"]):
-                        image_url = "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=300&q=80"
+                        image_url = images_rice[h_val % len(images_rice)]
                     elif "연어" in scan_text or "salmon" in scan_text:
-                        image_url = "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=300&q=80"
+                        image_url = images_salmon[h_val % len(images_salmon)]
                     elif any(x in scan_text for x in ["새우", "오징어", "해물", "조개", "생선", "seafood", "shrimp", "squid", "fish"]):
-                        image_url = "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=300&q=80"
+                        image_url = images_seafood[h_val % len(images_seafood)]
                     elif any(x in scan_text for x in ["소고기", "쇠고기", "beef"]):
-                        image_url = "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=300&q=80"
+                        image_url = images_beef[h_val % len(images_beef)]
                     elif any(x in scan_text for x in ["돼지고기", "삼겹살", "제육", "pork"]):
-                        image_url = "https://images.unsplash.com/photo-1602489114888-6625801334f5?auto=format&fit=crop&w=300&q=80"
+                        image_url = images_pork[h_val % len(images_pork)]
                     elif any(x in scan_text for x in ["닭고기", "치킨", "닭발", "chicken"]):
-                        image_url = "https://images.unsplash.com/photo-1598515214211-89d3e73ae83b?auto=format&fit=crop&w=300&q=80"
+                        image_url = images_chicken[h_val % len(images_chicken)]
                     elif any(x in scan_text for x in ["전골", "찌개", "국", "탕", "스튜", "soup", "stew", "hotpot"]):
-                        image_url = "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=300&q=80"
+                        image_url = images_soup[h_val % len(images_soup)]
                     elif "두부" in scan_text or "tofu" in scan_text:
-                        image_url = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=300&q=80"
+                        image_url = images_tofu[h_val % len(images_tofu)]
                     elif "버섯" in scan_text or "mushroom" in scan_text:
-                        image_url = "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=300&q=80"
+                        image_url = images_mushrooms[h_val % len(images_mushrooms)]
                     elif any(x in scan_text for x in ["샐러드", "무침", "salad", "vegetable", "green"]):
-                        image_url = "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=300&q=80"
+                        image_url = images_salad[h_val % len(images_salad)]
                     elif "계란" in scan_text or "달걀" in scan_text or "egg" in scan_text:
-                        image_url = "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=300&q=80"
+                        image_url = images_egg[h_val % len(images_egg)]
                     else:
                         # 3. 매핑 실패 시: Cleaned loremflickr fallback
                         kw = r.get('image_keyword', 'food').lower()
                         kw_cleaned = kw.replace(" ", ",").replace("-", ",").strip()
                         kw_list = [k for k in kw_cleaned.split(",") if k]
-                        kw_list = kw_list[:2]  # 검색 신뢰도를 높이기 위해 태그는 최대 2개로 제한
+                        kw_list = kw_list[:2]
                         if kw_list:
                             image_url = f"https://loremflickr.com/300/300/food,{','.join(kw_list)}/all?lock={idx+10}"
                         else:

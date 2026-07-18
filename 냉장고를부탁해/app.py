@@ -106,13 +106,8 @@ if 'survey_answers' not in st.session_state:
     }
 
 if 'ingredients' not in st.session_state:
-    # 기본 테스트 식재료 셋
-    st.session_state.ingredients = [
-        {"name": "두부", "expiry_date": datetime.date.today() + datetime.timedelta(days=2), "quantity": 1},
-        {"name": "대파", "expiry_date": datetime.date.today() + datetime.timedelta(days=5), "quantity": 2},
-        {"name": "새우", "expiry_date": datetime.date.today() - datetime.timedelta(days=1), "quantity": 5},
-        {"name": "소고기", "expiry_date": datetime.date.today() + datetime.timedelta(days=1), "quantity": 1}
-    ]
+    # 기본 테스트 식재료 셋 (비워달라는 요청 반영)
+    st.session_state.ingredients = []
 
 if 'rescued_count' not in st.session_state:
     st.session_state.rescued_count = 0
@@ -126,14 +121,8 @@ if not st.session_state.survey_completed:
     st.markdown('<div class="main-title">🌿 Zero Waste 음식 취향 테스트 🥑</div>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle">나만의 식습관과 선호를 파악하여 최적의 친환경 레시피를 추천해 드립니다!</div>', unsafe_allow_html=True)
     
-    # 상단 프로그레스 바
-    # 설문 항목 중 '선택 안 함'이 아닌 비율 계산
-    answered_count = sum(1 for v in st.session_state.survey_answers.values() if v != "선택 안 함")
-    total_questions = len(st.session_state.survey_answers)
-    progress_ratio = answered_count / total_questions
-    
-    st.progress(progress_ratio)
-    st.caption(f"**진행률:** {answered_count} / {total_questions} 문항 완료 ({(progress_ratio*100):.0f}%)")
+    # 상단 프로그레스 바 영역 (하단에서 실시간 계산 후 채움)
+    progress_container = st.container()
     
     st.write("---")
     
@@ -196,9 +185,14 @@ if not st.session_state.survey_completed:
         'dessert': q_dessert
     }
     
-    # 실시간 화면 갱신 유도
-    if st.button("답변 실시간 반영하기 🔄"):
-        st.rerun()
+    # 실시간 화면 갱신 시 컨테이너에 진행률 그리기
+    answered_count = sum(1 for v in st.session_state.survey_answers.values() if v != "선택 안 함")
+    total_questions = len(st.session_state.survey_answers)
+    progress_ratio = answered_count / total_questions
+    
+    with progress_container:
+        st.progress(progress_ratio)
+        st.caption(f"**진행률:** {answered_count} / {total_questions} 문항 완료 ({(progress_ratio*100):.0f}%)")
 
     st.write("---")
     
@@ -454,10 +448,33 @@ else:
                 <span class="badge badge-cal">🔥 {r['calories']} kcal</span>
                 """
                 
+                # 레시피별 정확히 일치하는 고화질 Unsplash 이미지 URL 매핑
+                base_name = r['name'].split(" (")[0]
+                image_map = {
+                    "두부 야채 볶음": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&q=80",
+                    "매콤 소고기 볶음": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=200&q=80",
+                    "갈릭 크림 파스타": "https://images.unsplash.com/photo-1546549032-9571cd6b27df?auto=format&fit=crop&w=200&q=80",
+                    "불닭 볶음 우동": "https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=200&q=80",
+                    "해물 토마토 스튜": "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=200&q=80",
+                    "견과류 멸치 볶음": "https://images.unsplash.com/photo-1538332576187-e5108f499c78?auto=format&fit=crop&w=200&q=80",
+                    "초간단 계란 간장밥": "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=200&q=80",
+                    "연어 샐러드": "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=200&q=80",
+                    "버섯 전골": "https://images.unsplash.com/photo-1547592165-817ab5520a15?auto=format&fit=crop&w=200&q=80",
+                    "꿔바로우식 버섯 탕수": "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=200&q=80",
+                    "상큼 과일 요거트볼": "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=200&q=80",
+                    "상큼 민트 레몬에이드": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=200&q=80"
+                }
+                image_url = image_map.get(base_name, "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=200&q=80")
+                
                 st.markdown(f"""
                 <div class="recipe-card">
-                    <div class="recipe-title">🍳 {r['name']}</div>
-                    <div style="margin-bottom:12px;">{badges_html}</div>
+                    <div style="display:flex; gap: 20px; align-items: center; margin-bottom: 15px;">
+                        <img src="{image_url}" style="width:120px; height:120px; border-radius:12px; object-fit:cover; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" alt="Recipe Image">
+                        <div>
+                            <div class="recipe-title" style="margin-bottom:8px;">🍳 {r['name']}</div>
+                            <div>{badges_html}</div>
+                        </div>
+                    </div>
                     <p style="color: #424242; font-size: 0.95rem;">{r['description']}</p>
                     <p style="font-size:0.9rem; font-weight:600; color:#1B5E20; margin-bottom:5px;">필요 핵심 재료: {", ".join(r['ingredients'])}</p>
                     <div class="zero-waste-box">
@@ -483,8 +500,8 @@ else:
                                 new_ingredients.append(ing)
                                 
                         st.session_state.ingredients = new_ingredients
-                        # 메트릭 누적 증가
-                        rescued_count_increment = len(rescued_list)
+                        # 메트릭 누적 증가 (냉장고에 추가된 재료가 없었더라도 레시피 완성 시 기본 보상 지급)
+                        rescued_count_increment = len(rescued_list) if len(rescued_list) > 0 else len(r['ingredients'])
                         st.session_state.rescued_count += rescued_count_increment
                         
                         st.balloons()

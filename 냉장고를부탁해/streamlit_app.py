@@ -764,7 +764,7 @@ else:
                 st.markdown(f"""
                 <div class="recipe-card">
                     <div style="display:flex; gap: 20px; align-items: center; margin-bottom: 15px;">
-                        <img src="{image_url}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=300&q=80';" style="width:120px; height:120px; border-radius:12px; object-fit:cover; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" alt="Recipe Image">
+                        <div style="width:120px; height:120px; border-radius:12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background-image: url('{image_url}'), url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=300&q=80'); background-size: cover; background-position: center; flex-shrink: 0;" title="Recipe Image"></div>
                         <div>
                             <div class="recipe-title" style="margin-bottom:8px;">🍳 {r['name']}</div>
                             <div>{badges_html}</div>
